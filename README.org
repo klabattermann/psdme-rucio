@@ -1,0 +1,17 @@
+
+
+* rucio cmdline
+** list-dids
+Not clear what the different between *list-dids* and *ls* is
+
+# list only datasets and container
+% rucio list-dids mfxte1234:*
+# also list files
+% rucio list-dids --filter type=ALL mfxte1234:*
+# filter on files and run_number
+% rucio list-dids --filter "type=FILE,run_number=2" mfxte1234:*   
+** Dataset content
+# list content of dataset
+% rucio list-content mfxte1234:xtc
+or
+% rucio list-files mfxte1234:xtc
