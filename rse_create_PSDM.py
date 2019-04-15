@@ -39,4 +39,4 @@ def create_scope(scope):
 
 if __name__ == '__main__':
     create_rse_psdm()
-    create_scope('mfxte1234')
+    create_scope('rtel12318')

@@ -1,0 +1,8 @@
+create_test_files.sh
+client_queries.py
+rse_create_PSDM.py
+scan_d_psdm.py
+rucio_psdm.py
+README.org
+test_rule.sh
+create_rte_setup.sh

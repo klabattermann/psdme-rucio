@@ -1,17 +1,121 @@
 
+* 
+rsync -av --files-from to_sync . rucio-dev:github/psdme-rucio/.
+* Setup for rtel12318 (Rucio Test Experiment)
+** File, DIDs and DS names and layout
+File System: files are created under:
+/reg/d/psdm/rtel12318/xtc/<stem>.xtc
+/reg/d/psdm/rtel12318/xtc/smalldata/<stem>.smd.xtc
 
-* rucio cmdline
+Rucio
+Files: xtc.<stem>,xtc
+Files: smd.<stem>.smd.xtc
+DS: xtc
+DS: smd
+
+** Create PSDM_DISK RSE and scope rtel12318
+% ./rse_create_PSDM.py
+** Add datasets
+% rucio add-dataset rtel12318:xtc 
+% rucio add-dataset rtel12318:smd
+% rucio list-dids rtel12318:*
+   |---------------+------------|
+   | SCOPE:NAME    | [DID TYPE] |
+   |---------------+------------|
+   | rtel12318:sm  | DATASET    |
+   | rtel12318:xtc | DATASET    |
+   |---------------+------------|
+** Create datapath
+mkdir -p  /reg/d/psdm/rte/rtel12318/xtc/smalldata
+* rtel00119 using run data sets
+** Setup
+% rucio-admin scope add --scope rtel00119 --account root
+% rucio add-container rtel00119:xtc
+% rucio add-dataset rtel00119:xtc.run00001
+% rucio attach rtel00119:xtc rtel00119:xtc.run00001
+% rucio list-content rtel00119:xtc
+** Questions
+- meta data for container
+- select container using meta data: e.g.: run-number 
+  
+
+* Create and Register files
+** Create dummy files for a run
+create dummy files in /reg/d/psdm/rtertel12318/xtc
+xtc (in xtc/) files and smalldata (in xtc/smalldata/) files 
+are created.
+xtc files have the name: e_rtel12318_r<runnr>_s<stream>.xtc
+smalldata files have the name: e_rtel12318_r<runnr>_s<stream>.smd.xtc
+% ./create_test_files.sh <run-nr>
+** register files to rucio
+scan a directory and register all not yet registered files.
+attach xtc files to xtc dataset and smalldata files to the smd.xtc
+dataset.
+% ./scan_d_psdm.py /reg/d/psdm/rte/rtel12318/xtc 
+* Use rucio cmdline
 ** list-dids
 Not clear what the different between *list-dids* and *ls* is
-
 # list only datasets and container
-% rucio list-dids mfxte1234:*
+% rucio list-dids rtel12318:*
 # also list files
-% rucio list-dids --filter type=ALL mfxte1234:*
+% rucio list-dids --filter type=ALL rtel12318:*
 # filter on files and run_number
-% rucio list-dids --filter "type=FILE,run_number=2" mfxte1234:*   
+% rucio list-dids --filter "type=FILE,run_number=14" rtel12318:*
 ** Dataset content
-# list content of dataset
-% rucio list-content mfxte1234:xtc
+# list content of dataset (no selection on meta-data possible)
+% rucio list-content rtel12318:xtc
+% rucio list-content rtel12318:smd
 or
-% rucio list-files mfxte1234:xtc
+% rucio list-files rtel12318:xtc
+% rucio list-files rtel12318:smd
+
+* Issues Questions
+** Select files in a data set using meta-data and return meta data
+There is no obvious command to query files in a dataset and filter on the 
+metadata. 
+Also queries that filter on meta-data (list-dids) don't return meta-data
+No range queries on meta-data (e.g.: 4 < run_number < 10)
+
+
+* log/debug
+** names, urls for submitting to FTS
+From transfer.py get_transfer_requests_and_source_replicas():
+
+
+scope: rtel00119
+name: xtc.files.e_rtel00119_r00013_s0001.xtc
+path: /rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc 
+attributes: {"ds_name": null, "ds_scope":  null }      #must be json as null not None
+dsn: xtc.run00013
+naming_convention: None
+dest_path: /xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
+dest_url: root://dtn04.nersc.gov:2076//psdm/test/rucio/xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
+
+src_url: root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc
+
+
+*** raw 
+WWKK1.1 rtel00119 xtc.files.e_rtel00119_r00013_s0001.xtc f5121a3a path: /rte/rtel001a19/xtc/e_rtel00119_r00013_s0001.xtc 275914407fcf4f72a4039f016822cb1c 1a0b031353a14888916
+5e0223e868cb4 LCLS_REGD None {"ds_name": null, "priority": 3, "adler32": "f5121a3a", "source_replica_expression": null, "activity": "User Subscriptions", "lifetime": null, 
+"allow_tape_source": true, "bytes": 207872, "ds_scope": null, "md5": null}
+WWKK3.1 xtc.run00013 xtc.files.e_rtel00119_r00013_s0001.xtc None /xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
+<rucio.rse.protocols.xrootd.Default object at 0x7f1a8c590f90> 275914407fcf4f72a4039f016822cb1c_root
+XXWW //psdm/test/rucio/
+WWKK3.1 xtc.run00013 xtc.files.e_rtel00119_r00013_s0001.xtc None /xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc 
+  root://dtn04.nersc.gov:2076//psdm/test/rucio/xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
+XXWW //psdm/misc/test/
+WWKK3.2 root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc
+2019-04-14 23:35:23,691 193     DEBUG   Sources before sorting: [(u'LCLS_REGD', u'root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r00
+013_s0001.xtc', '1a0b031353a148889165e0223e868cb4', 0, 1L)]
+2019-04-14 23:35:23,691 193     DEBUG   Sources after sorting: [(u'LCLS_REGD', u'root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r000
+13_s0001.xtc', '1a0b031353a148889165e0223e868cb4', 0, 1L)]
+2019-04-14 23:35:23,691 193     DEBUG   Transfer for request(8b08f6e329ce4f2aaf3680c21d623fad): {'schemes': [u'root'], 'dest_spacetoken': None, 'bring_online': None, 'sourc
+es': [(u'LCLS_REGD', u'root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc', '1a0b031353a148889165e0223e868cb4', 0)], 'e
+xternal_host': 'https://rucio-dev.slac.stanford.edu:8446', 'overwrite': True, 'selection_strategy': 'auto', 'file_metadata': {'dst_type': 'DISK', 'adler32': u'f5121a3a', 's
+rc_rse': u'LCLS_REGD', 'activity': u'User Subscriptions', 'request_type': 'transfer', 'dest_rse_id': '275914407fcf4f72a4039f016822cb1c', 'src_type': 'DISK', 'dst_rse': u'LC
+LS_NERSC', 'md5': None, 'name': u'xtc.files.e_rtel00119_r00013_s0001.xtc', 'src_rse_id': '1a0b031353a148889165e0223e868cb4', 'filesize': 207872L, 'request_id': '8b08f6e329c
+e4f2aaf3680c21d623fad', 'scope': u'rtel00119', 'verify_checksum': 'both'}, 'copy_pin_lifetime': None, 'request_id': '8b08f6e329ce4f2aaf3680c21d623fad', 'dest_urls': [u'root
+://dtn04.nersc.gov:2076//psdm/test/rucio/xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc'], 'src_spacetoken': None, 'rule_id': 'dc939435fde34df1a58a7ae86de463e2'}
+2019-04-14 23:35:23,692 193     INFO    Thread [1/1] : Got 1 transfers for None in 0.0835371017456 seconds
+2019-04-14 23:35:23,692 193     INFO    Thread [1/1] : Starting to group transfers for None
+
