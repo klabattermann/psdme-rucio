@@ -26,6 +26,42 @@ create_scope() {
 }
 
 
+################################### 
+# Create SLAC_DATA rse
+#
+create_rse_LCLS_DATA() {
+    rse=LCLS_DATA
+    
+    #rucio-admin rse add --non-deterministic ${rse}
+    #rucio-admin rse set-attribute --rse ${rse} --key istape --value False
+    #rucio-admin rse set-attribute --rse ${rse} --key fts --value "https://rucio-dev.slac.stanford.edu:8446"
+    
+    #rucio-admin rse add-protocol --hostname localhost --scheme file --prefix /reg/d/psdm --impl "rucio.rse.protocols.posix.Default" \
+    #            --domain-json '{"wan": {"read": 1, "write": 1, "third_party_copy": 0, "delete": 1}, "lan": {"read": 1, "write": 1, "delete": 1}}' \
+    #            ${rse}
+    
+    rucio-admin rse add-protocol --hostname 134.79.103.90 --scheme root --prefix "//psdm/rucio" --port 2076 \
+                --impl 'rucio.rse.protocols.xrootd.Default' \
+                --domain-json '{"wan": {"read": 1, "write": 1, "third_party_copy": 1, "delete": 0}, "lan": {"read": 1, "write": 1, "delete": 0}}' \
+                ${rse}
+}
+
+
+create_rse_LCLS_NERSC() {
+    rse=LCLS_NERSC
+    
+    rucio-admin rse add --non-deterministic ${rse}
+    rucio-admin rse set-attribute --rse ${rse} --key istape --value False
+    rucio-admin rse set-attribute --rse ${rse} --key fts --value "https://134.79.129.252:8446"
+        
+    rucio-admin rse add-protocol --hostname 128.55.205.21 --scheme root --prefix "//psdm/rucio" --port 2076 \
+                --impl 'rucio.rse.protocols.xrootd.Default' \
+                --domain-json '{"wan": {"read": 1, "write": 1, "third_party_copy": 1, "delete": 0}, "lan": {"read": 1, "write": 1, "delete": 0}}' \
+                ${rse}
+}
+
+
+
 create_rse() {
     # ${LCLS_regd}
     rucio-admin rse add --non-deterministic ${LCLS_regd}
@@ -84,20 +120,33 @@ create_exper_container() {
 
 
 set_distance() {
-    rucio-admin rse add-distance --distance 1 --ranking 1 ${LCLS_regd} ${NERSC_dtn}
-    rucio-admin rse add-distance --distance 1 --ranking 1 ${NERSC_dtn} ${LCLS_regd}
-    rucio-admin rse get-distance  ${LCLS_regd} ${NERSC_dtn}
-    rucio-admin rse get-distance  ${NERSC_dtn} ${LCLS_regd}
+    rucio-admin rse add-distance --distance 1 --ranking 1 LCLS_DATA LCLS_NERSC
+    rucio-admin rse add-distance --distance 1 --ranking 1 LCLS_NERSC LCLS_DATA
+    rucio-admin rse get-distance LCLS_DATA LCLS_NERSC
+    rucio-admin rse get-distance LCLS_NERSC LCLS_DATA
 }
 
 
-mode=${1:?}
-shift 1 
-case "${mode}" in
-    scope) create_scope ;;
-    rse) create_rse ;;
-    ds) create_exper_container ;;
-    distance) set_distance ;;
-    qq) qq ;;
-    *) info_all "$@" ;;
-esac
+set_limits() {
+    rucio-admin  account set-limits wilko LCLS_DATA  10TB
+    rucio-admin  account set-limits wilko LCLS_NERSC 10TB
+}
+
+
+
+#create_rse_LCLS_DATA
+#create_rse_LCLS_NERSC
+#set_distance
+set_limits
+
+
+#mode=${1:?}
+#shift 1 
+#case "${mode}" in
+#    scope) create_scope ;;
+#    rse) create_rse ;;
+#    ds) create_exper_container ;;
+#    distance) set_distance ;;
+#    qq) qq ;;
+#    *) info_all "$@" ;;
+#esac
