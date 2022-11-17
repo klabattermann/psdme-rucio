@@ -1,0 +1,8 @@
+
+all.export /psdm/pcds/ readonly nomig nocheck nodread norcreate nopurge nostage
+all.export /psdm/rucio/ r/w nomig nocheck nodread norcreate nopurge nostage
+oss.localroot /home/wilko/data/xrd
+
+xrootd.prep keep 12H logdir /var/log/xrootd/
+
+xrd.port 2076

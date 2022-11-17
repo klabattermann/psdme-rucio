@@ -1,0 +1,102 @@
+
+* Commands
+
+** Init
+in rucio container
+% ./tools_tests_docker.sh -ir
+
+** Setup
+% rucio-admin scope add --scope wk01 --account root
+
+% echo 'flush_all' | nc localhost 11211 && httpd -k graceful
+% httpd -k graceful
+% docker run -it --entrypoint /bin/bash  rucio/xrootd
+% docker  image inspect e1c56c459340
+
+** DIDs
+% rucio list-dids --filter "type=all" wk01:*
+% rucio list-file-replicas wk01:wk.wk01.xtc.f12
+
+** Replication
+% rucio add-rule wk01:wk.wk01.xtc.f12 1 NERSC
+% rucio add-rule --source-replica-expression XRD3  test:file3 1 NERSC
+
+% rucio list-rules --account root
+% rucio-conveyor-submitter --run-once
+
+# expire a rule and clean it
+% rucio update-rule --lifetime 1 <rule-ID>
+% rucio-judge-cleaner --run-once
+
+** restart service
+% docker-compose --file etc/docker/dev/docker-compose-storage-wk.yaml  restart xrd4
+
+* Issues
+** fts monitor
+https://localhost:8449/fts3/ftsmon/#/
+** wrong protocol
+registering a file failed as the pfn (for add_replicas) contained
+*root://localhost....* but the rse used xroot as scheme. Changing the 
+* Tests
+** upload files
+*** rucio upload --scope wk01 --rse XRD1 --name wk.wk01.xtc.f12  /tmp/f1
+The upload shows up as a rule.
+
+% rucio list-file-replicas wk01:wk.wk01.xtc.f12
+  XRD1: root://xrd1:1094//rucio/wk01/c6/73/wk.wk01.xtc.f12
+
+% rucio add-rule wk01:wk.wk01.xtc.f12 1 NERSC
+*** upload with flat structure
+% rucio upload --scope wk01 --rse XRD1 --name wk01-r001-s01-c00.xtc2  /tmp/f1
+in XRD1:
+root://xrd1:1094//rucio/wk01/99/a5/wk01-r001-s01-c00.xtc2
+** Replication
+*** To NERSC from XRDx and NERSC to STAPE
+% rucio add-rule wk01:wk01-r001-s01-c00.xtc2 1 NERSC
+% rucio list-file-replicas wk01:wk01-r001-s01-c00.xtc2
+XRD1: root://xrd1:1094//rucio/wk01/99/a5/wk01-r001-s01-c00.xtc2
+NERSC: root://xrd1:1094//rucio/nersc//wk0/wk01/xtc/wk01-r001-s01-c00.xtc2
+
+% rucio add-rule --source-replica-expression NERSC wk01:wk01-r001-s01-c00.xtc2 1 STAPE 
+% rucio list-file-replicas wk01:wk01-r001-s01-c00.xtc2
+......
+STAPE: root://xrd4:1097//rucio/tape/psdm//wk0/wk01/xtc/wk01-r001-s01-c00.xtc2
+** Tape
+*** Replicate the STAPE (is_tape=true, type=DISK)
+% rucio add-rule wk01:wk01-r0010-s01-c00.xtc2 1 STAPE
+- after adding the rule the rule-info showed Locked=False
+- File was transferred XRD4: /rucio/tape/psdm/wk0/wk01/xtc/wk01-r0010-s01-c00.xtc2
+- rule finished STATE=OK
+- xrootd log showed the expected sequence the last two commands are checksum adn stat
+
+*** Replicate the TTAPE (is_tape=true, type=TAPE)
+% rucio add-rule wk01:wk01-r0011-s01-c00.xtc2 1 TTAPE
+- after adding the rule the rule-info showed Locked=True,
+  otherwise no differences compared to STAPE rule
+- Same xrootd commands as before (AFAICT)
+- FTS shows transfer as ARCHIVING
+- nothing changed after running rucio-conveyor-poller
+- no further xrootd commands seen by xrd server
+- run */usr/sbin/fts_qos --no-daemon* in fts container, which issued a query prepare to the
+  xrootd. It failed (related to the reqid) and fts (web interface shows the transfer as failed.
+- running the poller nad finisher the rule stays in REPLICATING state. Guess need to cancel it?
+- 
+
+*** Use PREP plugin
+libXrdOfsPrepGPI/so 
+XrdOfsPrepare.hh 
+// Parameters: -admit <reqlist> [-cgi] [-maxfiles <n> [-maxreq <n>] // [-maxquery <n>] [-pfn] -run <pgm> // // <request>: cancel | evict | prep | query | stage // <reqlist>: <request>[,<request>] 
+
+: https://xrootd.slac.stanford.edu/doc/dev54/ofs_config.htm#_Toc89982388 
+
+gfal2 code:
+https://github.com/cern-fts/gfal2/blob/develop/src/plugins/xrootd/gfal_xrootd_plugin_archive.cpp
+
+
+*** to max
+Hello Max 
+We are also trying to use an archival resource with RUCIO/FTS for LCLS and ran into the same issue. My understanding its the following: Typically you would use prepare in two steps. First you issue a prepare command to xrootd which would return a request_id. With that id you can issue a "query prepare" to get the status of the request. xrootd will check if the provided  request_id is valid and if not return the error you are getting. As FTS will use a random request_id for the "query prepare" you get an error.
+For some setup it works as the "query prepare" handling is delegated to a plugin in which case the request_id is not checked (up to the plugin). Xrootd provides a generic prepare plugin that allows to handle the query prepare command in a script. The directive is something like:
+    ofs.preplib /usr/lib64/libXrdOfsPrepGPI.so -admit query -debug -run /home/preppgm
+Here /home/preppgm is the tool that gets called. The "Generic Prepare Plug-in" section in the ofs documentation (https://xrootd.slac.stanford.edu/doc/dev56/ofs_config.htm) explains the arguments that the command will be called with. I haven't finished yet looking at the response from the script which gets past to the client but it looks like FTS expects a json document but I still have to check the format. Hope that helps. 
+Cheers, Wilko  
