@@ -21,8 +21,8 @@ start_stop_container() {
 }
 
 
-DEV_YAML="etc/docker/dev/docker-compose-storage-wk.yaml"
-#DEV_YAML="etc/docker/dev/docker-compose-storage-wk_rel.yaml"
+#DEV_YAML="etc/docker/dev/docker-compose-storage-wk.yaml"
+DEV_YAML="etc/docker/dev/docker-compose-storage-wk129.yaml"
 
 case $1 in
     dock*) docker_start ;;
