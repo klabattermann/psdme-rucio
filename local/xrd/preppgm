@@ -1,0 +1,24 @@
+#!/bin/env python
+
+import sys
+import json 
+
+
+id = sys.argv[2]
+
+
+resp = {}
+#resp["request_id"] = "fd714986-b223-4ea3-8033-aa452c6a5db7"
+resp["request_id"] = str(id)
+resp["responses"] = []
+
+
+for fn in sys.argv[4:]:
+    fninfo = {"path": fn }
+    fninfo["path_exists"] = True
+    fninfo["on_tape"] = True 
+    fninfo["error_text"] = ""
+    resp["responses"].append(fninfo)
+
+
+print json.dumps(resp)
