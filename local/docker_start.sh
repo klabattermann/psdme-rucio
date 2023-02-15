@@ -10,9 +10,7 @@ docker_start() {
 }
 
 
-
 start_stop_container() {
-    cd /home/wilko/gitrepos/github/klabattermann/rucio/
     case $1 in
         start) docker-compose --file ${DEV_YAML} up -d  ;;
         stop)  docker-compose --file ${DEV_YAML} down ;;
@@ -21,14 +19,18 @@ start_stop_container() {
 }
 
 
-#DEV_YAML="etc/docker/dev/docker-compose-storage-wk.yaml"
-DEV_YAML="etc/docker/dev/docker-compose-storage-wk129.yaml"
+#DEV_YAML="rucio/etc/docker/dev/docker-compose-storage-wk129.yaml"
+DEV_YAML="rucio/etc/docker/dev/docker-compose-storage-wk.yaml"
+
+# PATH to bind to /home wihin containers
+export PSDME_DIR=$(pwd -P)/
 
 case $1 in
     dock*) docker_start ;;
     cont*)
-        # ./startup cont stop|start
-        start_stop_container $2 ;;
+        [[ ! -e ${DEV_YAML} ]] && echo "not found ${DEV_YAML} -> exit" && exit 2
+        start_stop_container $2
+        ;;
     *)
         echo "Unknown cmd $1"
         exit

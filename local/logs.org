@@ -1,9 +1,53 @@
 
-* Commands
+* Running RUCIO dev environment
+** Overview
+The RUCIO docker dev environemnt of the RUICO repo is used for locally
+testing the LCLS setup.
+Running the container requires two repositories:
+1) rucio.git
+   A clone of the rucio repository that contains the LCLS specific code changes
+   and docker files.
+2) klabattermann/psdme-rucio
+   Configuration that are used by the running rucio daemons
+   and tools to configure RUCIO.
 
-** Init
-in rucio container
-% ./tools_tests_docker.sh -ir
+** Installation and running
+*** Clone rucio clone
+% git clone git@github.com:klabattermann/rucio.git
+% git checkout feature-lcls
+*** clone psdme-rucio
+% git clone git@github.com:klabattermann/psdme-rucio.git
+% cd docker_dev
+% ln -s <path-to-rucio clone
+  the *docker_dev* folder should contain the link *rucio*
+*** start/stop container
+(cd to psdme-rucio/docker_dev)
+if needed start docker 
+% ./dev_start.sh docker
+
+Start the container using docker-compose
+% ./dev_start.sh cont [start|stop]
+
+The start script assumes that the docker file is at
+*rucio/etc/docker/dev/*
+It will also add the absolute path for the *psdme-rucio/docker_dev*
+to the docker file in order to bind mount it (/home with in the container).
+
+* Commands
+** Start container and init rucio
+
+Create a link to the rucio code e.g.:
+% ln -s ~/gitrepos/github/klabattermann/rucio
+To start and stop docker and the rucio container run:
+% ./docker_start.sh docker
+% ./docker_start.s cont [start|stop]
+
+The start command starts many rucio daemons: rucio+pstgres, fts+mysql and a few xrood server.
+The conveyor for replication has to be run by hand.
+
+Initialize the datbase and create rucio RSE's 
+% /opt/rucio
+% ./tools/run_tests_docker.sh -ir 
 
 ** Setup
 % rucio-admin scope add --scope wk01 --account root
@@ -100,3 +144,8 @@ For some setup it works as the "query prepare" handling is delegated to a plugin
     ofs.preplib /usr/lib64/libXrdOfsPrepGPI.so -admit query -debug -run /home/preppgm
 Here /home/preppgm is the tool that gets called. The "Generic Prepare Plug-in" section in the ofs documentation (https://xrootd.slac.stanford.edu/doc/dev56/ofs_config.htm) explains the arguments that the command will be called with. I haven't finished yet looking at the response from the script which gets past to the client but it looks like FTS expects a json document but I still have to check the format. Hope that helps. 
 Cheers, Wilko  
+
+
+* Build 1.26
+In /home/wilko/tmp/containers/dev
+% sudo docker build -t rucio/rucio-wk .

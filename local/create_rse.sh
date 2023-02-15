@@ -15,10 +15,9 @@ Account=root
 
 create_rse_NERSC() {
     rse=NERSC
-
-    #rucio-admin rse add --non-deterministic ${rse}
-    #rucio-admin rse set-attribute --rse ${rse} --key istape --value False
-    #rucio-admin rse set-attribute --rse ${rse} --key fts --value "https://fts:8446"
+    rucio-admin rse add --non-deterministic ${rse}
+    rucio-admin rse set-attribute --rse ${rse} --key istape --value False
+    rucio-admin rse set-attribute --rse ${rse} --key fts --value "https://fts:8446"
 
     rucio-admin rse add-protocol --hostname xrd1 --scheme root --prefix "//rucio" --port 1094 \
                 --impl 'rucio.rse.protocols.xrootd.Default' \
@@ -28,7 +27,6 @@ create_rse_NERSC() {
 
 create_rse_PCDS() {
     rse=PCDS
-
     rucio-admin rse add --non-deterministic ${rse}
     rucio-admin rse set-attribute --rse ${rse} --key istape --value False
     rucio-admin rse set-attribute --rse ${rse} --key fts --value "https://fts:8446"
@@ -38,7 +36,6 @@ create_rse_PCDS() {
                 --domain-json '{"wan": {"read": 1, "write": 1, "third_party_copy_read": 1, "third_party_copy_write": 1, "delete": 0}, "lan": {"read": 1, "write": 1, "delete": 0}}' \
                 ${rse}
 }
-
 
 set_distance() {
     rucio-admin rse add-distance --distance 1 --ranking 1 PCDS NERSC
@@ -63,6 +60,11 @@ case $1 in
     rse_nersc) create_rse_NERSC ;;
     rse_pcds) create_rse_PCDS ;;
     rse_dist) set_distance ;;
+    all)
+        create_rse_NERSC 
+        create_rse_PCDS
+        set_distance
+        ;;
     *)
         echo "Unknown command $1"
         exit

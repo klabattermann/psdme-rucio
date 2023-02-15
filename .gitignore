@@ -1,0 +1,10 @@
+
+
+
+*.pyc
+
+wk01/
+srv_from_rucio/
+dev_docker/rucio
+test*.json
+hist_docker_cmds
