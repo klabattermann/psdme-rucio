@@ -1,6 +1,93 @@
 
-* 
-rsync -av --files-from to_sync . rucio-dev:github/psdme-rucio/.
+This document is under development.
+
+* Naming in RUCIO
+** Scope
+Each experiment is it's own scope with the experiment name as the scope name.
+The instrumewnt name is not included.
+
+** Filenames
+RUCIO filenames do not use slashes (/) for creating directory hierarchies but periods (dot) to create
+some type of structure. Encoding a directory structure in this style doesn't allow to unambiguously
+extract path segments as names could have multiple extension, for example spliting *hdf5.smalldata.rte01.h5*
+and *hdf5.rte01.v0.h5* into _hdf5/smalldata_ and _hdf5_ would require to understand the extensions.
+
+The naming for *xtc* files is: *xtc.<xtc-filename>*
+here _xtc-filename_ is the xtc file as well as the smalldata xtc (smd.xtc), e.g.:
+#+BEGIN_EXAMPLE
+xtc.rte01-r0017-s02-c00.xtc
+xtc.rte01-r0017-s02-c00.smd.xtc
+#+END_EXAMPLE
+
+The LCLS RSE's are non-deterministic for file replication the physical path (pfn) is calculated from
+the RUCIO filename. This mapping is encoded in the ~construct_surl_LCLS()~ function. The input to this
+function is the _scope_, _dataset_, and _filename_. With the xtc naming scheme shown above the pfn is
+computed by checking for  the _xtc._ prefix, the instrument and experiment are obtained from the scope
+and if it is a smalldata file comes for matching the _smd.xtc[2]_ extension.
+
+* Setup of resources
+** RSE
+The script *create_rte_setup.sh* creates the *PCDS* and *NERSC* Ruci Storage Elements (RSE).
+The script also sets distance and limits.
+Both RSE's provide access to and Xrootd server either on psexport or a NERSC dtn. RUCIO is not direwctly accessing
+the Xrootd but is referring the file transfers to FTS. FTS is configured to use and sss key to authenticate to xrootd.
+This key provides access to the lclsrucio user name and has r/w access to the */psdm/rucio* path (Xrootd).
+
+** Scope and datasets
+Each experiment has it's own scope
+The test scope is *rte01*
+
+** filenames and datasets
+
+# xtc (container) <- run (dataset) <- file
+% rucio add-container rte01:xtc
+% rucio add-dataset rte01:xtc.run0017
+% rucio attach rte01:xtc1 rte01:xtc.run0017
+% rucio attach rte01:xtc.run0017 rte01:rte01-r0017-s02-c00.xtc
+
+# xtc <- file
+# xtc <- run
+# run <- file
+% rucio add-dataset rte01:xtc1
+% rucio add-dataset rte01:xtc1.run0017
+% rucio attach rte01:xtc1 rte01:xtc1.run0017
+% rucio attach rte01:xtc1.run0017 rte01:rte01-r0017-s02-c00.xtc
+% rucio attach rte01:xtc1 rte01:rte01-r0017-s02-c00.xtc
+** Names and surl 
+
+* File Registration and replication
+** Register file
+The rucio client is used to register files:
+
+from rucio.client.replicaclient import ReplicaClient
+client = ReplicaClient() 
+client.add_replicas('PCDS', [data])
+
+where data is a dictionary with the following keys:
+
+|---------+----------------------------------------------------------------------------------------|
+| key     | example value                                                                          |
+|---------+----------------------------------------------------------------------------------------|
+| scope   | rte01                                                                                  |
+| pfn     | root://psexport02.slac.stanford.edu:2076//psdm/rucio/rte/rte01/rte01-r0017-s02-c00.xtc |
+| name    | rte01-r0017-s02-c00.xtc',                                                              |
+| bytes   | 5057102748                                                                             |
+| md5     | fe50f462fa8355d5356edc8e88fe717b',                                                     |
+| adler32 | faadee7b                                                                               |
+|---------+----------------------------------------------------------------------------------------|
+
+The pfn is the proper xrootd path including (must) port number and the prefix (part of the RSE protocol).
+
+** Replication rules
+% rucio add-rule --account wilko rte01:rte01-r0011-s03-c00.xtc 1 NERSC
+% rucio rule-info <rule-id>
+
+Expiring a rule
+% rucio update-rule --lifetime 1 <rule-id>
+
+When a rule fails changing the lifetime to 1 will eventually fail the ruls and have it
+cleaned up by the ~dev_rucio-judge-cleaner~ daemon.
+
 * Setup for rtel12318 (Rucio Test Experiment)
 ** File, DIDs and DS names and layout
 File System: files are created under:
@@ -36,9 +123,7 @@ mkdir -p  /reg/d/psdm/rte/rtel12318/xtc/smalldata
 % rucio list-content rtel00119:xtc
 ** Questions
 - meta data for container
-- select container using meta data: e.g.: run-number 
-  
-
+- select container using meta data: e.g.: run-number
 * Create and Register files
 ** Create dummy files for a run
 create dummy files in /reg/d/psdm/rtertel12318/xtc
@@ -53,14 +138,20 @@ attach xtc files to xtc dataset and smalldata files to the smd.xtc
 dataset.
 % ./scan_d_psdm.py /reg/d/psdm/rte/rtel12318/xtc 
 * Use rucio cmdline
+** Rules
+% rucio add-rule rte01:rte01-r0017-s02-c00.xtc 1 NERSC
+% rucio update-rule --lifetime 1 a4b70ea7394649789b54b74a605fd230
 ** list-dids
 Not clear what the different between *list-dids* and *ls* is
 # list only datasets and container
-% rucio list-dids rtel12318:*
+% rucio list-dids rte01:*
 # also list files
-% rucio list-dids --filter type=ALL rtel12318:*
+% rucio list-dids --filter type=ALL rte01:*
 # filter on files and run_number
 % rucio list-dids --filter "type=FILE,run_number=14" rtel12318:*
+** Meta data 
+% rucio get-metadata rte01:rte01-r0017-s02-c00.xtc
+% rucio get-metadata rte01:xtc1 
 ** Dataset content
 # list content of dataset (no selection on meta-data possible)
 % rucio list-content rtel12318:xtc
@@ -70,18 +161,22 @@ or
 % rucio list-files rtel12318:smd
 
 * Issues Questions
+** use production account (psdatmgr) within rucio for datamgt not root
 ** Select files in a data set using meta-data and return meta data
 There is no obvious command to query files in a dataset and filter on the 
 metadata. 
 Also queries that filter on meta-data (list-dids) don't return meta-data
 No range queries on meta-data (e.g.: 4 < run_number < 10)
 
-
 * log/debug
+** The rucio daemon logs are:
+daemon logs:  /var/log/ruciodaemons
+For ruci-dev these logs are accessible from the daemon container but also the dev_rucio one. 
+
 ** names, urls for submitting to FTS
-From transfer.py get_transfer_requests_and_source_replicas():
+From transfer.py ~get_transfer_requests_and_source_replicas()~:
 
-
+#+BEGIN_EXAMPLE
 scope: rtel00119
 name: xtc.files.e_rtel00119_r00013_s0001.xtc
 path: /rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc 
@@ -92,9 +187,10 @@ dest_path: /xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
 dest_url: root://dtn04.nersc.gov:2076//psdm/test/rucio/xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc
 
 src_url: root://psexport06.slac.stanford.edu:2076//psdm/misc/test/rte/rtel00119/xtc/e_rtel00119_r00013_s0001.xtc
+#+END_EXAMPLE
 
-
-*** raw 
+*** raw
+#+BEGIN_EXAMPLE
 WWKK1.1 rtel00119 xtc.files.e_rtel00119_r00013_s0001.xtc f5121a3a path: /rte/rtel001a19/xtc/e_rtel00119_r00013_s0001.xtc 275914407fcf4f72a4039f016822cb1c 1a0b031353a14888916
 5e0223e868cb4 LCLS_REGD None {"ds_name": null, "priority": 3, "adler32": "f5121a3a", "source_replica_expression": null, "activity": "User Subscriptions", "lifetime": null, 
 "allow_tape_source": true, "bytes": 207872, "ds_scope": null, "md5": null}
@@ -118,4 +214,4 @@ e4f2aaf3680c21d623fad', 'scope': u'rtel00119', 'verify_checksum': 'both'}, 'copy
 ://dtn04.nersc.gov:2076//psdm/test/rucio/xtc/xtc.run00013/xtc.files.e_rtel00119_r00013_s0001.xtc'], 'src_spacetoken': None, 'rule_id': 'dc939435fde34df1a58a7ae86de463e2'}
 2019-04-14 23:35:23,692 193     INFO    Thread [1/1] : Got 1 transfers for None in 0.0835371017456 seconds
 2019-04-14 23:35:23,692 193     INFO    Thread [1/1] : Starting to group transfers for None
-
+#+END_EXAMPLE
