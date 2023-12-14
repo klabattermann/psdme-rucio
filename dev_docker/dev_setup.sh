@@ -13,7 +13,19 @@ init_resources() {
     rucio-admin rse add-protocol --hostname xrd1 --scheme root --prefix "//rucio/nersc" --port 1094 \
                 --impl 'rucio.rse.protocols.xrootd.Default' --domain-json "${json_rse}" NERSC
 
-    # tape resource, rse_type Disk 
+    # S3DF disk resource
+    rucio-admin rse add --non-deterministic S3DF
+    rucio-admin rse set-attribute --rse S3DF --key istape --value False
+    rucio-admin rse set-attribute --rse S3DF --key fts --value "https://fts:8446"
+    rucio-admin rse add-protocol --hostname xrd2 --scheme root --prefix "//rucio/sdf" --port 1095 \
+                --impl 'rucio.rse.protocols.xrootd.Default' --domain-json "${json_rse}" S3DF
+
+    rucio-admin rse add-protocol --hostname localhost --scheme posix  --prefix "/home/data" \
+                --impl "rucio.rse.protocols.posix.Default" \
+                --domain-json '{"lan": {"read": 1, "write": 1, "delete": 1}, "wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 0, "third_party_copy_write": 0}}'    S3DF 
+
+
+    # tape resource, rse_type Disk
     rucio-admin rse add --non-deterministic STAPE
     rucio-admin rse set-attribute --rse STAPE --key istape --value True
     rucio-admin rse set-attribute --rse STAPE --key archive_timeout --value 600
@@ -34,6 +46,9 @@ init_resources() {
     rucio-admin rse add-distance --distance 1 --ranking 1 NERSC STAPE
     rucio-admin rse add-distance --distance 1 --ranking 1 STAPE NERSC
 
+    rucio-admin rse add-distance --distance 1 --ranking 1 NERSC S3DF
+    rucio-admin rse add-distance --distance 1 --ranking 1 S3DF NERSC
+
     rucio-admin rse add-distance --distance 1 --ranking 1 NERSC TTAPE
     rucio-admin rse add-distance --distance 1 --ranking 1 TTAPE NERSC
 
@@ -50,13 +65,14 @@ init_resources() {
 
 init_files() {
     # create files and upload to NERSC rse
-    for i in {10..20} ; do
+    for i in {110..120} ; do
         cnt=$(( ($RANDOM % 30)  + 2 ))
-        dd if=/dev/urandom of=/tmp/f1 bs=512K count=${cnt} &> /dev/null
+        dd if=/dev/urandom of=/tmp/f1 bs=4K count=${cnt} &> /dev/null
         fn="wk01-r00${i}-s01-c00.xtc2"
         pfn="root://xrd1:1094//rucio/nersc/wk/wk01/xtc/${fn}"
-        rucio upload --scope wk01 --rse NERSC --pfn ${pfn} --name ${fn} /tmp/f1
-        rucio attach wk01:xtc wk01:${fn}
+        did="xtc/${fn}"
+        rucio upload --scope wk01 --rse NERSC --pfn ${pfn} --name "${did}" /tmp/f1
+        rucio attach wk01:xtc wk01:${did}
     done
 }
 
@@ -66,7 +82,7 @@ init_misc() {
     rucio upload --scope wk01 --rse XRD1 --name wk01-r001-s01-c00.xtc2  /tmp/f1
 
     dd if=/dev/urandom of=/tmp/f1 bs=1M count=12
-    rucio upload --scope wk01 --rse XRD1 --name wk.wk01.xtc.f12  /tmp/f1
+    rucio upload --scope wk01 --rse XRD1 --name wk0.wk01.xtc.f12  /tmp/f1
 
     # data sets
     rucio attach wk01:xtc wk01:wk01-r001-s002-c01.xtc2
