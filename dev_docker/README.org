@@ -1,0 +1,89 @@
+
+* posix protocol
+** add protocol
+#+BEGIN_EXAMPLE
+rucio-admin rse add-protocol --hostname localhost --scheme posix  --prefix "/home/data"
+  --impl "rucio.rse.protocols.posix.Default"
+  --domain-json '{"lan": {"read": 1, "write": 1, "delete": 1}, "wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 0, "third_party_copy_write": 0}}'
+  S3DF 
+#+END_EXAMPLE
+
+** Register file
+#+BEGIN_EXAMPLE
+from rucio.client.replicaclient import ReplicaClient
+data = {
+    'pfn': "posix:///home/data/f1",
+    'bytes': 37,
+    'md5': '217b326c52ae1fda54a6e6d0423f429b',
+    'name': "h.f1",
+    'scope': "wk01",
+}
+client.add_replicas('S3DF', [data])
+#+END_EXAMPLE
+
+** get a file using posix protocol
+% rucio get --protocol posix  --dir /tmp  wk01:h.f1 
+
+The file is written to /tmp/wk01/h.f1 
+
+As far as I can tell the rucio server is calling internally the get function from the protocol/posix.py
+and the src and dest folders are relative to the rucio server.
+
+* Replication
+** names and path
+
+|--------+---------------------------------------------------------------------------|
+| rse/fn | path                                                                      |
+|--------+---------------------------------------------------------------------------|
+| file   | wk01:xtc.wk01-r00110-s01-c00.xtc2                                         |
+| NERSC  | root://xrd1:1094*//rucio/nersc/*/wk/wk01/xtc/wk01-r00110-s01-c00.xtc2     |
+| STAPE  | root://xrd4:1097*//rucio/tape/psdm/*/wk0/wk01/xtc/wk01-r00110-s01-c00.xtc |
+|--------+---------------------------------------------------------------------------|
+
+The NERSC name is from upload (dev_setup.sh) the STAPE path from the construct_surl. 
+
+
+** xrootd TPC
+on the destination the tpc script was called with:
+ -S 1
+ xroot://xrd1:1094///rucio/nersc//wk/wk01/xtc/wk01-r00110-s01-c00.xtc2?&tpc.key=14e8b0e60037046064a34404&tpc.org=fts3.1120@dev_fts_1.dev_default
+ /rucio/tape/psdm/wk0/wk01/xtc/wk01-r00110-s01-c00.xtc2
+
+
+ 
+* Naming
+
+Using *identity* mapping with deterministic resource:
+rse/protocols/protocol.py::class RSEDeterministicTranslation
+#+BEGIN_SRC python
+def __identity()
+   if scope.startswith('user') or scope.startswith('group'):
+            scope = scope.replace('.', '/')
+        return '%s/%s' % (scope, name)
+#+END_SRC python
+
+* Changes to LCLS RUCIO
+
+** LCLS policy and schema
+*** schema.py
+Add backslash "\\/" to pattern for:
+  *SCOPE* and *NAME*
+** sss protocol for xrootd
+rse/protocols/gfal.py
+#+BEGIN_SRC python
+self.__ctx.set_opt_string("XROOTD PLUGIN", "XRD.WANTPROT", "gsi,unix")
+to
+self.__ctx.set_opt_string("XROOTD PLUGIN", "XRD.WANTPROT", "gsi,sss,unix")
+#+END_SRC
+
+
+* Question
+
+** Does FTS has a bring online option?
+What does it do?
+How does it work .
+
+** Migration to tape
+
+Maybe FTS could have the inverse of bring-online (e.g., migrate). 
+
