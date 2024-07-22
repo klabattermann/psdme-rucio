@@ -13,7 +13,7 @@ testing the LCLS setup. Running the container requires two repositories:
    Configuration that are used by the running rucio daemons
    and tools to configure RUCIO.
 
-There are some changes in rucio v33 and the instruction might not work with older versions. 
+There are some changes in rucio v33 and the instruction might not work with older versions.
 
 
 ### Clone rucio clone
@@ -22,9 +22,16 @@ There are some changes in rucio v33 and the instruction might not work with olde
   % git clone git@github.com:klabattermann/rucio.git
   #% git checkout feature-lcls
   % git checkout lcls-use-policy
+
+  Or update
+  sync in github
+  % git checkout master
+  % git pull
+  % git checkout lcls-use-policy
+  % git merge master
 ```
 
-The old not-used-anymore *feature-lcls* branch contains the LCLS policies (surl functions in the rucio code) but now we 
+The old not-used-anymore *feature-lcls* branch contains the LCLS policies (surl functions in the rucio code) but now we
 are using the POLICY_PACKAGE.
 
 ### clone psdme-rucio
@@ -37,7 +44,7 @@ are using the POLICY_PACKAGE.
 
 ### start/stop container
 
-The LCLSRucioPolicy is read from *psdme-rucio/docker_dev/lcls/*.
+The LCLSRucioPolicy is read from *psdme-rucio/dev_docker/lcls/*.
 
 cd to psdme-rucio repo and psdme-rucio/docker_dev (this folder must contain a link to the rucio repo).
 
@@ -57,7 +64,7 @@ Before using RUCIO the database has to be initialized and we are greating a few 
 
 ```code
     % cd /opt/rucio
-    % ./tools/run_tests_docker.sh -ir
+    % ./tools/run_tests.sh -ir
     DON'T forget the -ir otherwise many tests will be run
 
     % cd /home
@@ -98,11 +105,11 @@ After the above initialization the following resources exists:
 ### Container
 
 ```code
-% echo 'flush_all' | nc localhost 11211 && httpd -k graceful
-% httpd -k graceful
-% docker run -it --entrypoint /bin/bash  rucio/xrootd
-% docker  image inspect e1c56c459340
-% docker-compose --file etc/docker/dev/docker-compose-storage-wk.yaml  restart xrd4
+    % echo 'flush_all' | nc localhost 11211 && httpd -k graceful
+    % httpd -k graceful
+    % docker run -it --entrypoint /bin/bash  rucio/xrootd
+    % docker  image inspect e1c56c459340
+    % docker-compose --file etc/docker/dev/docker-compose-storage-wk.yaml  restart xrd4
 ```
 
 ### RSE
@@ -114,20 +121,19 @@ After the above initialization the following resources exists:
 ### DIDs and scope 
 
 ```code
-% rucio list-dids --filter "type=all" wk01:*
-% rucio list-file-replicas wk01:xtc.wk01-r00110-s01-c00.xtc2
+    % rucio list-dids --filter "type=all" wk01:*
+    % rucio list-file-replicas wk01:xtc/wk01-r0012-s01-c00.xtc2
 
-% rucio  list-scopes 
+    % rucio  list-scopes 
 ```
-
-
 
 ### Rules and Replication
 
 ```code
-    % rucio add-rule wk01:wk.wk01.xtc.f12 1 NERSC
+    % rucio add-rule wk01:xtc/wk01-r0012-s01-c00.xtc2 1 NERSC
     % rucio add-rule --source-replica-expression XRD3  test:file3 1 NERSC
     % rucio list-rules --account root
+    % rucio rule-info <rule-ID>
 
     # the conveyor daemons need to run to execute rules 
     % rucio-conveyor-submitter --run-once

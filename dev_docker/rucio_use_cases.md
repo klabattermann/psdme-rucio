@@ -16,7 +16,7 @@
 ## Naming
 
 ## Scope
-   <instr>.<expt>
+   instr.expt or instr/expt (currently not working)
 
 ## did xtc
 

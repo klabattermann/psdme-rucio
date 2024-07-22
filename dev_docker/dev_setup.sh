@@ -20,10 +20,11 @@ init_resources() {
     rucio-admin rse add-protocol --hostname xrd2 --scheme root --prefix "//rucio/sdf" --port 1095 \
                 --impl 'rucio.rse.protocols.xrootd.Default' --domain-json "${json_rse}" S3DF
 
-    rucio-admin rse add-protocol --hostname localhost --scheme posix  --prefix "/home/data" \
-                --impl "rucio.rse.protocols.posix.Default" \
-                --domain-json '{"lan": {"read": 1, "write": 1, "delete": 1}, "wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 0, "third_party_copy_write": 0}}'    S3DF 
+    #rucio-admin rse add-protocol --hostname localhost --scheme posix  --prefix "/home/data" \
+    #            --impl "rucio.rse.protocols.posix.Default" \
+    #            --domain-json '{"lan": {"read": 1, "write": 1, "delete": 1}, "wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy_read": 0, "third_party_copy_write": 0}}'    S3DF
 
+    rucio-admin  rse set-attribute --rse S3DF --key naming_convention --value LCLS
 
     # tape resource, rse_type Disk
     rucio-admin rse add --non-deterministic STAPE
@@ -35,7 +36,7 @@ init_resources() {
 
 
     rucio-admin rse add --non-deterministic TTAPE
-    rucio-admin rse update --setting rse_type --value TAPE --rse TTAPE 
+    rucio-admin rse update --setting rse_type --value TAPE --rse TTAPE
     rucio-admin rse set-attribute --rse TTAPE --key istape --value True
     rucio-admin rse set-attribute --rse TTAPE --key archive_timeout --value 600
     rucio-admin rse set-attribute --rse TTAPE --key fts --value "https://fts:8446"
@@ -65,14 +66,18 @@ init_resources() {
 
 init_files() {
     # create files and upload to NERSC rse
-    for i in {110..120} ; do
+
+    #indarr=$(seq 100 113)
+    indarr=(13)
+    for i in ${indarr[@]} ; do
         cnt=$(( ($RANDOM % 30)  + 2 ))
         dd if=/dev/urandom of=/tmp/f1 bs=4K count=${cnt} &> /dev/null
         fn="wk01-r00${i}-s01-c00.xtc2"
         pfn="root://xrd1:1094//rucio/nersc/wk/wk01/xtc/${fn}"
+        #did="xtc.${fn}"
         did="xtc/${fn}"
         rucio upload --scope wk01 --rse NERSC --pfn ${pfn} --name "${did}" /tmp/f1
-        rucio attach wk01:xtc wk01:${did}
+        #echo rucio attach wk01:xtc wk01:${did}
     done
 }
 

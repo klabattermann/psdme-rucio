@@ -42,15 +42,12 @@ and the src and dest folders are relative to the rucio server.
 
 The NERSC name is from upload (dev_setup.sh) the STAPE path from the construct_surl. 
 
-
 ** xrootd TPC
 on the destination the tpc script was called with:
  -S 1
  xroot://xrd1:1094///rucio/nersc//wk/wk01/xtc/wk01-r00110-s01-c00.xtc2?&tpc.key=14e8b0e60037046064a34404&tpc.org=fts3.1120@dev_fts_1.dev_default
  /rucio/tape/psdm/wk0/wk01/xtc/wk01-r00110-s01-c00.xtc2
 
-
- 
 * Naming
 
 Using *identity* mapping with deterministic resource:
@@ -63,11 +60,27 @@ def __identity()
 #+END_SRC python
 
 * Changes to LCLS RUCIO
-
 ** LCLS policy and schema
-*** schema.py
+*** Setup
+[[https://rucio.github.io/documentation/operator/policy_packages/#creating-a-policy-package][policy-package]]
+
+Either use env:
+  PYTHONPATH=/home/lcls
+  RUCIO_POLICY_PACKAGE=LCLSRucioPolicy
+or
+  specify it in the rucio config (not sure how to do it)
+*** LCLSRucioPolicy package
+currently copy schema.py and permission.py from rucio
+
+lib/rucio/core/permission/generic.py -> permission.py
+lib/rucio/common/schema/generic.py -> schema.py
+
+This is fragile as rucio might update these files between versions and LCLS only needs
+changes for the naming pattern. 
+
+*** Use slash in did and scope (schema.py)
 Add backslash "\\/" to pattern for:
-  *SCOPE* and *NAME*
+*SCOPE* and *NAME*
 ** sss protocol for xrootd
 rse/protocols/gfal.py
 #+BEGIN_SRC python
@@ -78,7 +91,6 @@ self.__ctx.set_opt_string("XROOTD PLUGIN", "XRD.WANTPROT", "gsi,sss,unix")
 
 
 * Question
-
 ** Does FTS has a bring online option?
 What does it do?
 How does it work .
@@ -86,4 +98,33 @@ How does it work .
 ** Migration to tape
 
 Maybe FTS could have the inverse of bring-online (e.g., migrate). 
+
+
+
+
+* journal
+** submit
+2024-03-11 22:31:32,048 root    1756    DEBUG   About to submit job to https://fts:8446 with timeout None
+2024-03-11 22:31:32,053 urllib3.connectionpool  1756    DEBUG   Starting new HTTPS connection (1): fts:8446
+2024-03-11 22:31:32,130 urllib3.connectionpool  1756    DEBUG   https://fts:8446 "POST /jobs HTTP/1.1" 200 50
+2024-03-11 22:31:32,132 root    1756    DEBUG   Submit job 1c61d99a-dff7-11ee-a9ed-0242ac150004 to https://fts:8446 in 0.08375905600041733 seconds
+2024-03-11 22:31:32,133 root    1756    INFO    Setting state(SUBMITTED), transfertool(fts3), external_host(https://fts:8446) and eid(1c61d99a-dff7-11ee-a9ed-0242ac150004) for transfers: 690328b121064d139ed7b5dcf0b846ab
+2024-03-11 22:31:32,133 root    1756    DEBUG   COPYING REQUEST 690328b121064d139ed7b5dcf0b846ab DID test:file4 USING https://fts:8446 with state(RequestState.SUBMITTED) with eid(1c61d99a-dff7-11ee-a9ed-0242ac150004)
+2024-03-11 22:31:32,136 root    1756    DEBUG   Finished to register transfer state for 1c61d99a-dff7-11ee-a9ed-0242ac150004
+2024-03-11 22:31:32,137 root    1756    DEBUG   submitjob: transfers=['NERSC--852c648cc08146b19df6becf1ccd2bae->S3DF'], job_params={'account': root, 'verify_checksum': 'both', 'copy_pin_lifetime': None, 'bring_online': None, 'job_metadata': {'issuer'
+: 'rucio', 'multi_sources': False}, 'overwrite': True, 'priority': 3, 's3alternate': True, 'max_time_in_queue': 168}
+WWKK-utils False {'T0': <function construct_surl_T0 at 0x7f18a488ddc0>, 'DQ2': <function construct_surl_DQ2 at 0x7f18a488dd30>, 'BelleII': <function construct_surl_BelleII at 0x7f18a488de50>}
+WKWKWK PolPk LCLSRucioPolicy
+WWKK-utils None DQ2 {'T0': <function construct_surl_T0 at 0x7f18a488ddc0>, 'DQ2': <function construct_surl_DQ2 at 0x7f18a488dd30>, 'BelleII': <function construct_surl_BelleII at 0x7f18a488de50>, 'LCLS': <function construct_surl_LCLS at 0x7f18a485f3a0
+>}
+2024-03-11 22:31:32,141 root    1756    DEBUG   xrootd.Default: xrootd.lfns2pfns: lfns: {'scope': 'wk01', 'name': 'xtc/wk01-r0012-s01-c00.xtc2', 'path': '/other/other/xtc/wk01-r0012-s01-c00.xtc2'}
+2024-03-11 22:31:32,141 root    1756    DEBUG   PREPARING REQUEST 852c648cc08146b19df6becf1ccd2bae DID wk01:xtc/wk01-r0012-s01-c00.xtc2 TO SUBMITTING STATE PREVIOUS None FROM ['root://xrd1:1094//rucio/nersc//wk/wk01/xtc/wk01-r0012-s01-c00.xtc2'] TO r
+oot://xrd2:1095//rucio/sdf//other/other/xtc/wk01-r0012-s01-c00.xtc2 USING https://fts:8446
+2024-03-11 22:31:32,143 root    1756    DEBUG   About to submit job to https://fts:8446 with timeout None
+2024-03-11 22:31:32,148 urllib3.connectionpool  1756    DEBUG   Starting new HTTPS connection (1): fts:8446
+2024-03-11 22:31:32,207 urllib3.connectionpool  1756    DEBUG   https://fts:8446 "POST /jobs HTTP/1.1" 200 50
+2024-03-11 22:31:32,209 root    1756    DEBUG   Submit job 1c6dbb3e-dff7-11ee-b4dd-0242ac150004 to https://fts:8446 in 0.0654398949991446 seconds
+2024-03-11 22:31:32,209 root    1756    INFO    Setting state(SUBMITTED), transfertool(fts3), external_host(https://fts:8446) and eid(1c6dbb3e-dff7-11ee-b4dd-0242ac150004) for transfers: 852c648cc08146b19df6becf1ccd2bae
+2024-03-11 22:31:32,209 root    1756    DEBUG   COPYING REQUEST 852c648cc08146b19df6becf1ccd2bae DID wk01:xtc/wk01-r0012-s01-c00.xtc2 USING https://fts:8446 with state(RequestState.SUBMITTED) with eid(1c6dbb3e-dff7-11ee-b4dd-0242ac150004)
+2024-03-11 22:31:32,214 root    1756    DEBUG   Finished to register transfer state for 1c6dbb3e-dff7-11ee-b4dd-0242ac150004  
 

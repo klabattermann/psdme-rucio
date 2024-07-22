@@ -25,6 +25,7 @@ DEV_YAML="rucio/etc/docker/dev/docker-compose-storage-wk.yaml"
 
 # PATH to bind to /home wihin containers
 export PSDME_DIR=$(pwd -P)/
+export LCLS_RUCIO=/home/wilko/gitrepos/github/slaclab/lcls-rucio
 echo "PSDME_DIR set to ${PSDME_DIR}"
 
 
